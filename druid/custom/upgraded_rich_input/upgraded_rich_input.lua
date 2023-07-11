@@ -89,13 +89,8 @@ end
 
 local function outline_and_select(self)
 	self:select()
-	print(self.text)
-	print("scale ", gui.get_scale(self.text_node))
-	print("size ", gui.get_size(self.text_node))
-	print(gui.get_size(self.text_node).y * gui.get_scale(self.text_node).y)
 	if self.style.IS_DOUBLETAP_OUTLINE then
 		self.outlined = true
-		print(vmath.vector3(self.total_width, gui.get_size(self.text_node).y, 0))
 		gui.set_size(self.outline_node, vmath.vector3(self.total_width, gui.get_size(self.text_node).y * gui.get_scale(self.text_node).y / 0.75 * gui.get_scale(self.text_node).y / 0.75, 0))
 		gui.set_enabled(self.outline_node, true)
 	end
@@ -195,28 +190,10 @@ function UpgradedRichInput.init(self, template, nodes, keyboard_type)
 	self.on_input_empty = Event()
 	self.on_input_full = Event()
 	self.on_input_wrong = Event()
-
-	--[[
-	print("   ", self.value)
-	--
-	self.text_width = self.text:get_text_size(value)
-	--self.marked_text_width = self.text:get_text_size(marked_value)
-	print(text_width, marked_text_width)
-	self.total_width = self.text_width --  + self.marked_text_width
-	print(total_width)
-	--
-	--
-	self:set_text(self.value)
-	--]]
-
-	--
-	--self.style = {}
-	--self.style.IS_DOUBLETAP_OUTLINE = true
 	
 	self.text_width = self.text:get_text_size(value)
 	self.total_width = self.text_width
 	self:set_text(self.value)
-	--
 end
 
 
@@ -224,7 +201,6 @@ function UpgradedRichInput.on_input(self, action_id, action)
 	if self.is_selected then
 		local input_text = nil
 		if action_id == const.ACTION_TEXT then
-			print("action   1    ")
 			-- ignore return key
 			if action.text == "\n" or action.text == "\r" then
 				return true
@@ -256,7 +232,6 @@ function UpgradedRichInput.on_input(self, action_id, action)
 		end
 
 		if action_id == const.ACTION_MARKED_TEXT then
-			print("action   2    ")
 			self.marked_value = action.text or ""
 			if self.max_length then
 				self.marked_value = utf8.sub(self.marked_value, 1, self.max_length)
@@ -264,7 +239,6 @@ function UpgradedRichInput.on_input(self, action_id, action)
 		end
 
 		if action_id == const.ACTION_BACKSPACE and (action.pressed or action.repeated) then
-			print("action   3    ")
 			if self.outlined then
 				self.value = ""
 				cancel_outline(self)
@@ -274,38 +248,27 @@ function UpgradedRichInput.on_input(self, action_id, action)
 		end
 
 		if action_id == const.ACTION_ENTER and action.released then
-			print("action   4    ")
 			self:unselect()
 			return true
 		end
 
 		if action_id == const.ACTION_BACK and action.released then
-			print("action   5    ")
 			self:unselect()
 			return true
 		end
 
 		if action_id == const.ACTION_ESC and action.released then
-			print("action   6    ")
 			self:unselect()
 			return true
 		end
 
 		if input_text or #self.marked_value > 0 then
-			print("action   7    ")
 			self:set_text(input_text)
 			return true
 		end
 	end
 
-	--
-	if action_id == const.ACTION_TOUCH then
-		print("action   touch    ")
-	end
-	--
-
 	return self.is_selected
-	--return false
 end
 
 
