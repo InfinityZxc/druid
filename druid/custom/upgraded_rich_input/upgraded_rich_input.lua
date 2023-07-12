@@ -158,7 +158,7 @@ function UpgradedRichInput.init(self, template, nodes, keyboard_type)
 	self.outline_node = self:get_node(SCHEME.OUTLINE)
 	self.text_node = self:get_node(SCHEME.INPUT)
 	self.placeholder = self.druid:new_text(self:get_node(SCHEME.PLACEHOLDER))
-	
+
 	gui.set_enabled(self.outline_node, false)
 
 	self.is_selected = false
@@ -190,7 +190,7 @@ function UpgradedRichInput.init(self, template, nodes, keyboard_type)
 	self.on_input_empty = Event()
 	self.on_input_full = Event()
 	self.on_input_wrong = Event()
-	
+
 	self.text_width = self.text:get_text_size(value)
 	self.total_width = self.text_width
 	self:set_text(self.value)
@@ -339,7 +339,7 @@ function UpgradedRichInput.select(self)
 	gui.reset_keyboard()
 	self.marked_value = ""
 	if not self.is_selected then
-		self:set_input_priority(const.PRIORITY_INPUT_MAX, true)
+		self:set_input_priority(0, true)
 		self.button:set_input_priority(const.PRIORITY_INPUT_MAX, true)
 		self.previous_value = self.value
 		self.is_selected = true
@@ -367,7 +367,7 @@ function UpgradedRichInput.unselect(self)
 	gui.reset_keyboard()
 	self.marked_value = ""
 	if self.is_selected then
-		self:reset_input_priority()
+		self:set_input_priority(const.PRIORITY_INPUT_MAX, true)
 		self.button:reset_input_priority()
 		self.is_selected = false
 		cancel_outline(self)
