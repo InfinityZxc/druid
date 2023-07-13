@@ -3,6 +3,14 @@ local druid = require("druid.druid")
 local rich_input = require("druid.custom.rich_input.rich_input")
 local upgraded_rich_input = require("druid.custom.upgraded_rich_input.upgraded_rich_input")
 
+local function local_f(self, text)
+	gui.set_text(gui.get_node("upgraded_input_header_1"), "hi local " .. text)
+end
+
+function global_f(self, text)
+	gui.set_text(gui.get_node("upgraded_input_header_2"), "hi global " .. text)
+end
+
 function init(self)
 	self.druid = druid.new(self)
 
@@ -13,11 +21,21 @@ function init(self)
 		:set_allowed_characters("[%d,.]")
 
 	----[[
+	hi_func = function(self, text)
+		gui.set_text(gui.get_node("upgraded_input_header_3"), "hi named " .. text)
+	end
+		
 	self.rich_input = self.druid:new(rich_input, "rich_input")
 	self.rich_input:set_placeholder("Enter text here")
 
-	self.upgraded_rich_input = self.druid:new(upgraded_rich_input, "upgraded")
-	self.upgraded_rich_input:set_placeholder("Enter text here")
+	self.upgraded_rich_input_1 = self.druid:new(upgraded_rich_input, "upgraded_1", nil, local_f)
+	self.upgraded_rich_input_1:set_placeholder("Enter text here")
+
+	self.upgraded_rich_input_2 = self.druid:new(upgraded_rich_input, "upgraded_2", nil, global_f)
+	self.upgraded_rich_input_2:set_placeholder("Enter text here")
+
+	self.upgraded_rich_input_3 = self.druid:new(upgraded_rich_input, "upgraded_3", nil, hi_func)
+	self.upgraded_rich_input_3:set_placeholder("Enter text here")
 	----]]
 end
 

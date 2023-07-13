@@ -125,6 +125,7 @@ function UpgradedRichInput.on_style_change(self, style)
 	self.style.IS_DOUBLETAP_OUTLINE = style.IS_DOUBLETAP_OUTLINE or false
 	self.style.MASK_DEFAULT_CHAR = style.MASK_DEFAULT_CHAR or "*"
 	self.style.IS_UNSELECT_ON_RESELECT = style.IS_UNSELECT_ON_RESELECT or false
+	self.style.UNSELECT_IS_ENTER = style.UNSELECT_IS_ENTER or false
 
 	self.style.on_select = style.on_select or function(_, button_node) end
 	self.style.on_unselect = style.on_unselect or function(_, button_node) end
@@ -143,7 +144,7 @@ end
 -- @tparam node click_node Button node to enabled input component
 -- @tparam node|Text text_node Text node what will be changed on user input. You can pass text component instead of text node name @{Text}
 -- @tparam[opt] number keyboard_type Gui keyboard type for input field
-function UpgradedRichInput.init(self, template, nodes, keyboard_type)
+function UpgradedRichInput.init(self, template, nodes, on_enter, keyboard_type)
 	self:set_template(template)
 	self:set_nodes(nodes)
 	self.druid = self:get_druid(self)
@@ -158,8 +159,6 @@ function UpgradedRichInput.init(self, template, nodes, keyboard_type)
 	self.outline_node = self:get_node(SCHEME.OUTLINE)
 	self.text_node = self:get_node(SCHEME.INPUT)
 	self.placeholder = self.druid:new_text(self:get_node(SCHEME.PLACEHOLDER))
-
-	gui.set_enabled(self.outline_node, false)
 
 	self.is_selected = false
 	self.value = self.text.last_value
@@ -190,6 +189,8 @@ function UpgradedRichInput.init(self, template, nodes, keyboard_type)
 	self.on_input_empty = Event()
 	self.on_input_full = Event()
 	self.on_input_wrong = Event()
+
+	self.on_enter = on_enter
 
 	self.text_width = self.text:get_text_size(value)
 	self.total_width = self.text_width
@@ -248,6 +249,9 @@ function UpgradedRichInput.on_input(self, action_id, action)
 		end
 
 		if action_id == const.ACTION_ENTER and action.released then
+			if self.on_enter and not self.style.UNSELECT_IS_ENTER then
+				self.on_enter(self, self:get_text())
+			end
 			self:unselect()
 			return true
 		end
@@ -374,6 +378,10 @@ function UpgradedRichInput.unselect(self)
 
 		gui.hide_keyboard()
 		self.on_input_unselect:trigger(self:get_context(), self:get_text())
+
+		if self.on_enter and self.style.UNSELECT_IS_ENTER then
+			self.on_enter(self, self:get_text())
+		end
 
 		self.style.on_unselect(self, self.button.node)
 	end
