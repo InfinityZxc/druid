@@ -78,10 +78,14 @@ local function mask_text(text, mask)
 	return masked_text
 end
 
+local function clear_text(self)
+	self.cursor_shift = -1
+	self:set_text("")
+end
 
 local function clear_and_select(self)
 	if self.style.IS_LONGTAP_ERASE then
-		self:set_text("")
+		clear_text(self)
 	end
 
 	self:select()
@@ -89,6 +93,7 @@ end
 
 local function outline_and_select(self)
 	self:select()
+	
 	if self.style.IS_DOUBLETAP_OUTLINE then
 		self.outlined = true
 		gui.set_size(self.outline_node, vmath.vector3(self.total_width, gui.get_size(self.text_node).y * gui.get_scale(self.text_node).y / 0.75 * gui.get_scale(self.text_node).y / 0.75, 0))
@@ -99,6 +104,11 @@ end
 local function cancel_outline(self)
 	self.outlined = false
 	gui.set_enabled(self.outline_node, false)
+end
+
+local function position_cursor(self)
+	before_cursor_text_size = self.text:get_text_size(utf8.sub(self:get_text(), 1, self.cursor_shift).."|") - self.text:get_text_size("|")
+	gui.set_position(self.cursor, vmath.vector3(self.total_width/2 - (self.total_width - before_cursor_text_size), 0, 0))
 end
 
 local function animate_cursor(self)
@@ -175,6 +185,8 @@ function UpgradedRichInput.init(self, template, nodes, on_enter, keyboard_type)
 	self.max_length = nil
 	self.allowed_characters = nil
 
+	self.cursor_shift = -1
+
 	self.keyboard_type = keyboard_type or gui.KEYBOARD_TYPE_DEFAULT
 
 	self.button = self.druid:new_button(self:get_node(SCHEME.BUTTON), self.select)
@@ -192,8 +204,8 @@ function UpgradedRichInput.init(self, template, nodes, on_enter, keyboard_type)
 
 	self.on_enter = on_enter
 
-	self.text_width = self.text:get_text_size(value)
-	self.total_width = self.text_width
+	self.text_width = self.text:get_text_size(self.value.."|")
+	self.total_width = self.text_width - self.text:get_text_size("|")
 	self:set_text(self.value)
 end
 
@@ -216,11 +228,11 @@ function UpgradedRichInput.on_input(self, action_id, action)
 				if not self.allowed_characters or utf8.match(action.text, self.allowed_characters) then
 
 					if self.outlined then
-						self.value = ""
+						clear_text(self)
 						cancel_outline(self)
 					end
 
-					input_text = self.value .. action.text
+					input_text = utf8.sub(self.value, 1, self.cursor_shift) .. action.text .. utf8.sub(self.value, #self.value + self.cursor_shift + 2, -1)
 					if self.max_length then
 						input_text = utf8.sub(input_text, 1, self.max_length)
 					end
@@ -229,6 +241,24 @@ function UpgradedRichInput.on_input(self, action_id, action)
 					self.style.on_input_wrong(self, self.button.node)
 				end
 				self.marked_value = ""
+			end
+		end
+		
+		if action.pressed or action.repeated then
+			if action_id == const.ACTION_LEFT then
+				if self.cursor_shift ~= math.max(-1 - #self.value, self.cursor_shift - 1) then
+					self.cursor_shift = math.max(-1 - #self.value, self.cursor_shift - 1)
+					self.marked_value = ""
+					self:update_text()
+					position_cursor(self)
+				end
+			elseif action_id == const.ACTION_RIGHT then
+				if self.cursor_shift ~= math.min(-1, self.cursor_shift + 1) then
+					self.cursor_shift = math.min(-1, self.cursor_shift + 1)
+					self.marked_value = ""
+					self:update_text()
+					position_cursor(self)
+				end
 			end
 		end
 
@@ -241,11 +271,10 @@ function UpgradedRichInput.on_input(self, action_id, action)
 
 		if action_id == const.ACTION_BACKSPACE and (action.pressed or action.repeated) then
 			if self.outlined then
-				self.value = ""
+				clear_text(self)
 				cancel_outline(self)
 			end
-
-			input_text = utf8.sub(self.value, 1, -2)
+			input_text = utf8.sub(self.value, 1, self.cursor_shift - 1) .. utf8.sub(self.value, #self.value + self.cursor_shift + 2, -1)
 		end
 
 		if action_id == const.ACTION_ENTER and action.released then
@@ -286,6 +315,28 @@ function UpgradedRichInput.on_input_interrupt(self)
 end
 
 
+function UpgradedRichInput.update_text(self)
+	-- mask text if password field
+	local masked_value, masked_marked_value
+	if self.keyboard_type == gui.KEYBOARD_TYPE_PASSWORD then
+		local mask_char = self.style.MASK_DEFAULT_CHAR or "*"
+		masked_value = mask_text(self.value, mask_char)
+		masked_marked_value = mask_text(self.marked_value, mask_char)
+	end
+
+	-- text + marked text
+	local value = masked_value or self.value
+	local marked_value = masked_marked_value or self.marked_value
+	self.is_empty = #value == 0 and #marked_value == 0
+
+	local final_text = utf8.sub(value, 1, self.cursor_shift) .. marked_value .. utf8.sub(value, #value + self.cursor_shift + 2, -1)
+	self.text:set_to(final_text)
+
+	self.text_width = self.text:get_text_size(value.."|")
+	self.marked_text_width = self.text:get_text_size(marked_value.."|")
+	self.total_width = self.text_width + self.marked_text_width - 2 * self.text:get_text_size("|")
+end
+
 --- Set text for input field
 -- @tparam Input self @{Input}
 -- @tparam string input_text The string to apply for input field
@@ -314,13 +365,13 @@ function UpgradedRichInput.set_text(self, input_text)
 		local marked_value = masked_marked_value or self.marked_value
 		self.is_empty = #value == 0 and #marked_value == 0
 
-		local final_text = value .. marked_value
+		local final_text = utf8.sub(value, 1, self.cursor_shift) .. marked_value .. utf8.sub(value, #value + self.cursor_shift + 2, -1)
 		self.text:set_to(final_text)
 
 		-- measure it
-		self.text_width = self.text:get_text_size(value)
-		self.marked_text_width = self.text:get_text_size(marked_value)
-		self.total_width = self.text_width + self.marked_text_width
+		self.text_width = self.text:get_text_size(value.."|")
+		self.marked_text_width = self.text:get_text_size(marked_value.."|")
+		self.total_width = self.text_width + self.marked_text_width - 2 * self.text:get_text_size("|")
 
 		self.on_input_text:trigger(self:get_context(), final_text)
 		if #final_text == 0 then
@@ -332,7 +383,7 @@ function UpgradedRichInput.set_text(self, input_text)
 	end
 
 	animate_cursor(self)
-	gui.set_position(self.cursor, vmath.vector3(self.total_width/2, 0, 0))
+	position_cursor(self)
 	gui.set_scale(self.cursor, self.text.scale)
 end
 
@@ -395,7 +446,7 @@ end
 -- @tparam Input self @{Input}
 -- @treturn string The current input field text
 function UpgradedRichInput.get_text(self)
-	return self.value .. self.marked_value
+	return utf8.sub(self.value, 1, self.cursor_shift) .. self.marked_value .. utf8.sub(self.value, #self.value + self.cursor_shift + 2, -1)
 end
 
 
