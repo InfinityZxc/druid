@@ -162,7 +162,7 @@ M["druid.upgraded_rich_input"] = {
 
 	on_select = function(self, button_node)
 		local target_scale = self.button.start_scale
-		gui.animate(button_node, "scale", target_scale * M.input.BUTTON_SELECT_INCREASE, gui.EASING_OUTSINE, 0.15)
+		gui.animate(button_node, "scale", target_scale * M["druid.upgraded_rich_input"].BUTTON_SELECT_INCREASE, gui.EASING_OUTSINE, 0.15)
 	end,
 
 	on_unselect = function(self, button_node)

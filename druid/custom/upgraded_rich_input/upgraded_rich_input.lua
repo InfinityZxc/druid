@@ -57,6 +57,7 @@ local UpgradedRichInput = component.create("druid.upgraded_rich_input")
 
 
 local SCHEME = {
+	ROOT = "root",
 	BUTTON = "button",
 	INPUT = "input_text",
 	CURSOR = "cursor_node",
@@ -91,10 +92,8 @@ local function clear_and_select(self)
 	self:select()
 end
 
-local function outline_and_select(self)
-	self:select()
-	
-	if self.style.IS_DOUBLETAP_OUTLINE then
+local function outline_text(self)
+	if self.style.IS_DOUBLETAP_OUTLINE and self.is_selected then
 		self.outlined = true
 		gui.set_size(self.outline_node, vmath.vector3(self.total_width, gui.get_size(self.text_node).y * gui.get_scale(self.text_node).y / 0.75 * gui.get_scale(self.text_node).y / 0.75, 0))
 		gui.set_enabled(self.outline_node, true)
@@ -115,6 +114,24 @@ local function animate_cursor(self)
 	gui.cancel_animation(self.cursor, gui.PROP_COLOR)
 	gui.set_color(self.cursor, vmath.vector4(1))
 	gui.animate(self.cursor, gui.PROP_COLOR, vmath.vector4(1,1,1,0), gui.EASING_INSINE, 0.8, 0, nil, gui.PLAYBACK_LOOP_PINGPONG)
+end
+
+local function find_cursor_shift(self)
+	if self.last_touch then
+		touch_x = self.last_touch.screen_x
+		min_distance = nil
+		for tmp_cursor_shift = -1 - #self.value, -1, 1 do
+			test_before_cursor_text_size = self.text:get_text_size(utf8.sub(self:get_text(), 1, tmp_cursor_shift).."|") - self.text:get_text_size("|")
+			cursor_x = self.total_width/2 - (self.total_width - test_before_cursor_text_size)
+			gui.set_position(self.cursor, vmath.vector3(cursor_x, 0, 0))
+			test_x = gui.get_screen_position(self.cursor).x
+			test_dist = math.abs(test_x - touch_x)
+			if min_distance == nil or test_dist < min_distance then
+				min_distance = test_dist
+				self.cursor_shift = tmp_cursor_shift
+			end
+		end
+	end
 end
 
 --- Component style params.
@@ -141,11 +158,15 @@ function UpgradedRichInput.on_style_change(self, style)
 	self.style.on_unselect = style.on_unselect or function(_, button_node) end
 	self.style.on_input_wrong = style.on_input_wrong or function(_, button_node) end
 
-	self.style.button_style = style.button_style or {
+	self.style.button = style.button or {
 		LONGTAP_TIME = 0.4,
 		AUTOHOLD_TRIGGER = 0.8,
 		DOUBLETAP_TIME = 0.4
 	}
+
+	if self.button then
+		self.button:set_style(self.style)
+	end
 end
 
 
@@ -190,10 +211,10 @@ function UpgradedRichInput.init(self, template, nodes, on_enter, keyboard_type)
 	self.keyboard_type = keyboard_type or gui.KEYBOARD_TYPE_DEFAULT
 
 	self.button = self.druid:new_button(self:get_node(SCHEME.BUTTON), self.select)
-	self.button:set_style(self.button_style)
+	self.button:set_style(self.style)
 	self.button.on_click_outside:subscribe(self.unselect)
 	self.button.on_long_click:subscribe(clear_and_select)
-	self.button.on_double_click:subscribe(outline_and_select)
+	self.button.on_double_click:subscribe(outline_text)
 
 	self.on_input_select = Event()
 	self.on_input_unselect = Event()
@@ -204,6 +225,8 @@ function UpgradedRichInput.init(self, template, nodes, on_enter, keyboard_type)
 
 	self.on_enter = on_enter
 
+	self.last_touch = nil
+
 	self.text_width = self.text:get_text_size(self.value.."|")
 	self.total_width = self.text_width - self.text:get_text_size("|")
 	self:set_text(self.value)
@@ -211,6 +234,7 @@ end
 
 
 function UpgradedRichInput.on_input(self, action_id, action)
+	self.last_touch = action
 	if self.is_selected then
 		local input_text = nil
 		if action_id == const.ACTION_TEXT then
@@ -393,9 +417,13 @@ end
 function UpgradedRichInput.select(self)
 	gui.reset_keyboard()
 	self.marked_value = ""
+	find_cursor_shift(self)
+	position_cursor(self)
+	
 	if not self.is_selected then
 		self:set_input_priority(0, true)
 		self.button:set_input_priority(const.PRIORITY_INPUT_MAX, true)
+		
 		self.previous_value = self.value
 		self.is_selected = true
 
@@ -403,16 +431,16 @@ function UpgradedRichInput.select(self)
 		self.on_input_select:trigger(self:get_context())
 
 		self.style.on_select(self, self.button.node)
+
+		gui.set_enabled(self.placeholder.node, false)
+		gui.set_enabled(self.cursor, true)
+		animate_cursor(self)
 	else
 		cancel_outline(self)
 		if self.style.IS_UNSELECT_ON_RESELECT then
 			self:unselect(self)
 		end
 	end
-
-	gui.set_enabled(self.placeholder.node, false)
-	gui.set_enabled(self.cursor, true)
-	animate_cursor(self)
 end
 
 
@@ -424,6 +452,7 @@ function UpgradedRichInput.unselect(self)
 	if self.is_selected then
 		self:set_input_priority(const.PRIORITY_INPUT_MAX, true)
 		self.button:reset_input_priority()
+		
 		self.is_selected = false
 		cancel_outline(self)
 
@@ -435,10 +464,10 @@ function UpgradedRichInput.unselect(self)
 		end
 
 		self.style.on_unselect(self, self.button.node)
-	end
 
-	gui.set_enabled(self.placeholder.node, true and #(self.value .. self.marked_value) == 0)
-	gui.set_enabled(self.cursor, false)
+		gui.set_enabled(self.placeholder.node, true and #(self.value .. self.marked_value) == 0)
+		gui.set_enabled(self.cursor, false)
+	end
 end
 
 
