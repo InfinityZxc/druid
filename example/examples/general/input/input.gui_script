@@ -62,21 +62,45 @@ function init(self)
 	self.rich_input:set_placeholder("Enter text here")
 
 	style_test["druid.upgraded_rich_input"] = {
+		BUTTON_SELECT_INCREASE = 1.06,
+		
+		on_select = function(self, button_node)
+			local target_scale = self.button.start_scale
+			gui.animate(button_node, "scale", target_scale * style_test["druid.upgraded_rich_input"], gui.EASING_OUTSINE, 0.15)
+		end,
+
+		on_unselect = function(self, button_node)
+			local start_scale = self.button.start_scale
+			gui.animate(button_node, "scale", start_scale, gui.EASING_OUTSINE, 0.15)
+		end,
+
+		on_input_wrong = function(self, button_node)
+			local start_pos = self.button.start_pos
+			gui.animate(button_node, "position.x", start_pos.x - 3, gui.EASING_OUTSINE, 0.05, 0, function()
+				gui.animate(button_node, "position.x", start_pos.x + 3, gui.EASING_OUTSINE, 0.1, 0, function()
+					gui.animate(button_node, "position.x", start_pos.x, gui.EASING_OUTSINE, 0.05)
+				end)
+			end)
+		end,
+		
 		button = {
 			LONGTAP_TIME = 0.4,
 			AUTOHOLD_TRIGGER = 2.8,
 			DOUBLETAP_TIME = 0.4,
 		},
 	}
-	self.upgraded_rich_input_1 = self.druid:new(upgraded_rich_input, "upgraded_1", nil, local_f)
+	self.upgraded_rich_input_1 = self.druid:new(upgraded_rich_input, "upgraded_1")
 	self.upgraded_rich_input_1:set_placeholder("Enter text here")
+	self.upgraded_rich_input_1.on_input_enter:subscribe(local_f)
 	--self.upgraded_rich_input_1:set_style(style_test)
 
-	self.upgraded_rich_input_2 = self.druid:new(upgraded_rich_input, "upgraded_2", nil, global_f)
+	self.upgraded_rich_input_2 = self.druid:new(upgraded_rich_input, "upgraded_2")
 	self.upgraded_rich_input_2:set_placeholder("Enter text here")
+	self.upgraded_rich_input_2.on_input_enter:subscribe(global_f)
 
-	self.upgraded_rich_input_3 = self.druid:new(upgraded_rich_input, "upgraded_3", nil, hi_func)
+	self.upgraded_rich_input_3 = self.druid:new(upgraded_rich_input, "upgraded_3")
 	self.upgraded_rich_input_3:set_placeholder("Enter text here")
+	self.upgraded_rich_input_3.on_input_enter:subscribe(hi_func)
 	----]]
 end
 

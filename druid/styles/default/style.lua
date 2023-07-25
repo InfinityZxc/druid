@@ -155,6 +155,7 @@ M["hotkey"] = {
 M["druid.upgraded_rich_input"] = {
 	IS_LONGTAP_ERASE = true,
 	IS_DOUBLETAP_OUTLINE = true,
+	IS_TRIPLETAP_OUTLINE_ALL = true,
 	BUTTON_SELECT_INCREASE = 1.06,
 	MASK_DEFAULT_CHAR = "*",
 	IS_UNSELECT_ON_RESELECT = false,

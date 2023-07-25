@@ -92,35 +92,70 @@ local function clear_and_select(self)
 	self:select()
 end
 
-local function outline_text(self)
-	if self.style.IS_DOUBLETAP_OUTLINE and self.is_selected then
-		self.outlined = true
-		gui.set_size(self.outline_node, vmath.vector3(self.total_width, gui.get_size(self.text_node).y * gui.get_scale(self.text_node).y / 0.75 * gui.get_scale(self.text_node).y / 0.75, 0))
-		gui.set_enabled(self.outline_node, true)
-	end
-end
-
-local function cancel_outline(self)
-	self.outlined = false
-	gui.set_enabled(self.outline_node, false)
-end
-
-local function position_cursor(self)
-	before_cursor_text_size = self.text:get_text_size(utf8.sub(self:get_text(), 1, self.cursor_shift).."|") - self.text:get_text_size("|")
-	gui.set_position(self.cursor, vmath.vector3(self.total_width/2 - (self.total_width - before_cursor_text_size), 0, 0))
-end
-
 local function animate_cursor(self)
 	gui.cancel_animation(self.cursor, gui.PROP_COLOR)
 	gui.set_color(self.cursor, vmath.vector4(1))
 	gui.animate(self.cursor, gui.PROP_COLOR, vmath.vector4(1,1,1,0), gui.EASING_INSINE, 0.8, 0, nil, gui.PLAYBACK_LOOP_PINGPONG)
 end
 
+local function position_cursor(self)
+	local before_cursor_text_size = self.text:get_text_size(utf8.sub(self:get_text(), 1, self.cursor_shift).."|") - self.text:get_text_size("|")
+	gui.set_position(self.cursor, vmath.vector3(self.total_width/2 - (self.total_width - before_cursor_text_size), 0, 0))
+end
+
+local function outline_text(self)
+	if self.style.IS_DOUBLETAP_OUTLINE and self.is_selected then
+		if self.button.click_in_row == 2 then
+			self.marked_value = ""
+			self:update_text()
+			
+			local text = self:get_text()
+			self.outline_from = utf8.len(text) + self.cursor_shift + 2
+			self.outline_to = utf8.len(text) + self.cursor_shift + 1
+			
+			while self.outline_from > 1 and utf8.sub(text, self.outline_from - 1, self.outline_from - 1) ~= " " do
+				self.outline_from = self.outline_from - 1
+			end
+			while self.outline_to < utf8.len(text) and utf8.sub(text, self.outline_to + 1, self.outline_to + 1) ~= " " do
+				self.outline_to = self.outline_to + 1
+			end
+			
+			if self.outline_from <= self.outline_to then
+				local size_x = self.text:get_text_size(utf8.sub(text, self.outline_from, self.outline_to))
+				local before_from_text_size = self.text:get_text_size(utf8.sub(self:get_text(), 1, self.outline_from - utf8.len(text) - 2).."|") - self.text:get_text_size("|")
+				
+				self.outlined = true
+				
+				gui.set_position(self.outline_node, vmath.vector3(self.total_width/2 - (self.total_width - before_from_text_size) + size_x / 2, 0, 0))
+				gui.set_size(self.outline_node, vmath.vector3(size_x, gui.get_size(self.text_node).y * gui.get_scale(self.text_node).y / 0.75 * gui.get_scale(self.text_node).y / 0.75, 0))
+				gui.set_enabled(self.outline_node, true)
+			end
+		elseif self.button.click_in_row == 3 then
+			self.marked_value = ""
+			self:update_text()
+			self.outlined = true
+			self.outlined_all = true
+			gui.set_position(self.outline_node, vmath.vector3(0, 0, 0))
+			gui.set_size(self.outline_node, vmath.vector3(self.total_width, gui.get_size(self.text_node).y * gui.get_scale(self.text_node).y / 0.75 * gui.get_scale(self.text_node).y / 0.75, 0))
+			gui.set_enabled(self.outline_node, true)
+		end
+		gui.set_enabled(self.cursor, false)
+	end
+end
+
+local function cancel_outline(self)
+	self.outlined = false
+	self.outlined_all = false
+	gui.set_enabled(self.outline_node, false)
+	gui.set_enabled(self.cursor, true)
+	animate_cursor(self)
+end
+
 local function find_cursor_shift(self)
 	if self.last_touch then
 		touch_x = self.last_touch.screen_x
 		min_distance = nil
-		for tmp_cursor_shift = -1 - #self.value, -1, 1 do
+		for tmp_cursor_shift = -1 - utf8.len(self.value), -1, 1 do
 			test_before_cursor_text_size = self.text:get_text_size(utf8.sub(self:get_text(), 1, tmp_cursor_shift).."|") - self.text:get_text_size("|")
 			cursor_x = self.total_width/2 - (self.total_width - test_before_cursor_text_size)
 			gui.set_position(self.cursor, vmath.vector3(cursor_x, 0, 0))
@@ -150,6 +185,7 @@ function UpgradedRichInput.on_style_change(self, style)
 
 	self.style.IS_LONGTAP_ERASE = style.IS_LONGTAP_ERASE or false
 	self.style.IS_DOUBLETAP_OUTLINE = style.IS_DOUBLETAP_OUTLINE or false
+	self.style.IS_TRIPLETAP_OUTLINE_ALL = style.IS_TRIPLETAP_OUTLINE_ALL or false
 	self.style.MASK_DEFAULT_CHAR = style.MASK_DEFAULT_CHAR or "*"
 	self.style.IS_UNSELECT_ON_RESELECT = style.IS_UNSELECT_ON_RESELECT or false
 	self.style.UNSELECT_IS_ENTER = style.UNSELECT_IS_ENTER or false
@@ -163,10 +199,6 @@ function UpgradedRichInput.on_style_change(self, style)
 		AUTOHOLD_TRIGGER = 0.8,
 		DOUBLETAP_TIME = 0.4
 	}
-
-	if self.button then
-		self.button:set_style(self.style)
-	end
 end
 
 
@@ -175,7 +207,7 @@ end
 -- @tparam node click_node Button node to enabled input component
 -- @tparam node|Text text_node Text node what will be changed on user input. You can pass text component instead of text node name @{Text}
 -- @tparam[opt] number keyboard_type Gui keyboard type for input field
-function UpgradedRichInput.init(self, template, nodes, on_enter, keyboard_type)
+function UpgradedRichInput.init(self, template, nodes, keyboard_type)
 	self:set_template(template)
 	self:set_nodes(nodes)
 	self.druid = self:get_druid(self)
@@ -198,6 +230,9 @@ function UpgradedRichInput.init(self, template, nodes, on_enter, keyboard_type)
 	self.marked_value = ""
 	self.is_empty = true
 	self.outlined = false
+	self.outlined_all = false
+	self.outline_from = 1
+	self.outline_to = 1
 
 	self.text_width = 0
 	self.market_text_width = 0
@@ -218,12 +253,11 @@ function UpgradedRichInput.init(self, template, nodes, on_enter, keyboard_type)
 
 	self.on_input_select = Event()
 	self.on_input_unselect = Event()
+	self.on_input_enter = Event()
 	self.on_input_text = Event()
 	self.on_input_empty = Event()
 	self.on_input_full = Event()
 	self.on_input_wrong = Event()
-
-	self.on_enter = on_enter
 
 	self.last_touch = nil
 
@@ -250,13 +284,17 @@ function UpgradedRichInput.on_input(self, action_id, action)
 			-- ignore arrow keys
 			if not utf8.match(hex, "EF9C8[0-3]") then
 				if not self.allowed_characters or utf8.match(action.text, self.allowed_characters) then
-
 					if self.outlined then
-						clear_text(self)
+						if self.outlined_all then
+							clear_text(self)
+						else
+							self.cursor_shift = self.outline_to - utf8.len(self.value) - 1
+							input_text = utf8.sub(self.value, 1, self.outline_from - 1) .. action.text .. utf8.sub(self.value, self.outline_to + 1, -1)
+						end
 						cancel_outline(self)
+					else
+						input_text = utf8.sub(self.value, 1, self.cursor_shift) .. action.text .. utf8.sub(self.value, utf8.len(self.value) + self.cursor_shift + 2, -1)
 					end
-
-					input_text = utf8.sub(self.value, 1, self.cursor_shift) .. action.text .. utf8.sub(self.value, #self.value + self.cursor_shift + 2, -1)
 					if self.max_length then
 						input_text = utf8.sub(input_text, 1, self.max_length)
 					end
@@ -270,13 +308,19 @@ function UpgradedRichInput.on_input(self, action_id, action)
 		
 		if action.pressed or action.repeated then
 			if action_id == const.ACTION_LEFT then
-				if self.cursor_shift ~= math.max(-1 - #self.value, self.cursor_shift - 1) then
-					self.cursor_shift = math.max(-1 - #self.value, self.cursor_shift - 1)
+				if self.outlined then
+					cancel_outline(self)
+				end
+				if self.cursor_shift ~= math.max(-1 - utf8.len(self.value), self.cursor_shift - 1) then
+					self.cursor_shift = math.max(-1 - utf8.len(self.value), self.cursor_shift - 1)
 					self.marked_value = ""
 					self:update_text()
 					position_cursor(self)
 				end
 			elseif action_id == const.ACTION_RIGHT then
+				if self.outlined then
+					cancel_outline(self)
+				end
 				if self.cursor_shift ~= math.min(-1, self.cursor_shift + 1) then
 					self.cursor_shift = math.min(-1, self.cursor_shift + 1)
 					self.marked_value = ""
@@ -295,15 +339,21 @@ function UpgradedRichInput.on_input(self, action_id, action)
 
 		if action_id == const.ACTION_BACKSPACE and (action.pressed or action.repeated) then
 			if self.outlined then
-				clear_text(self)
+				if self.outlined_all then
+					clear_text(self)
+				else
+					self.cursor_shift = self.outline_to - utf8.len(self.value) - 1
+					input_text = utf8.sub(self.value, 1, self.outline_from - 1) .. utf8.sub(self.value, self.outline_to + 1, -1)
+				end
 				cancel_outline(self)
+			else
+				input_text = utf8.sub(self.value, 1, self.cursor_shift - 1) .. utf8.sub(self.value, utf8.len(self.value) + self.cursor_shift + 2, -1)
 			end
-			input_text = utf8.sub(self.value, 1, self.cursor_shift - 1) .. utf8.sub(self.value, #self.value + self.cursor_shift + 2, -1)
 		end
 
 		if action_id == const.ACTION_ENTER and action.released then
-			if self.on_enter and not self.style.UNSELECT_IS_ENTER then
-				self.on_enter(self, self:get_text())
+			if not self.style.UNSELECT_IS_ENTER then
+				self.on_input_enter:trigger(self:get_context(), self:get_text())
 			end
 			self:unselect()
 			return true
@@ -319,7 +369,7 @@ function UpgradedRichInput.on_input(self, action_id, action)
 			return true
 		end
 
-		if input_text or #self.marked_value > 0 then
+		if input_text or utf8.len(self.marked_value) > 0 then
 			self:set_text(input_text)
 			return true
 		end
@@ -351,9 +401,9 @@ function UpgradedRichInput.update_text(self)
 	-- text + marked text
 	local value = masked_value or self.value
 	local marked_value = masked_marked_value or self.marked_value
-	self.is_empty = #value == 0 and #marked_value == 0
+	self.is_empty = utf8.len(value) == 0 and utf8.len(marked_value) == 0
 
-	local final_text = utf8.sub(value, 1, self.cursor_shift) .. marked_value .. utf8.sub(value, #value + self.cursor_shift + 2, -1)
+	local final_text = utf8.sub(value, 1, self.cursor_shift) .. marked_value .. utf8.sub(value, utf8.len(value) + self.cursor_shift + 2, -1)
 	self.text:set_to(final_text)
 
 	self.text_width = self.text:get_text_size(value.."|")
@@ -371,7 +421,7 @@ function UpgradedRichInput.set_text(self, input_text)
 	end
 
 	-- Only update the text if it has changed
-	local current_value = self.value .. self.marked_value
+	local current_value = utf8.sub(self.value, 1, self.cursor_shift) .. self.marked_value .. utf8.sub(self.value, utf8.len(self.value) + self.cursor_shift + 2, -1)
 
 	if current_value ~= self.current_value then
 		self.current_value = current_value
@@ -387,9 +437,9 @@ function UpgradedRichInput.set_text(self, input_text)
 		-- text + marked text
 		local value = masked_value or self.value
 		local marked_value = masked_marked_value or self.marked_value
-		self.is_empty = #value == 0 and #marked_value == 0
+		self.is_empty = utf8.len(value) == 0 and utf8.len(marked_value) == 0
 
-		local final_text = utf8.sub(value, 1, self.cursor_shift) .. marked_value .. utf8.sub(value, #value + self.cursor_shift + 2, -1)
+		local final_text = utf8.sub(value, 1, self.cursor_shift) .. marked_value .. utf8.sub(value, utf8.len(value) + self.cursor_shift + 2, -1)
 		self.text:set_to(final_text)
 
 		-- measure it
@@ -398,10 +448,10 @@ function UpgradedRichInput.set_text(self, input_text)
 		self.total_width = self.text_width + self.marked_text_width - 2 * self.text:get_text_size("|")
 
 		self.on_input_text:trigger(self:get_context(), final_text)
-		if #final_text == 0 then
+		if utf8.len(final_text) == 0 then
 			self.on_input_empty:trigger(self:get_context(), final_text)
 		end
-		if self.max_length and #final_text == self.max_length then
+		if self.max_length and utf8.len(final_text) == self.max_length then
 			self.on_input_full:trigger(self:get_context(), final_text)
 		end
 	end
@@ -459,13 +509,13 @@ function UpgradedRichInput.unselect(self)
 		gui.hide_keyboard()
 		self.on_input_unselect:trigger(self:get_context(), self:get_text())
 
-		if self.on_enter and self.style.UNSELECT_IS_ENTER then
-			self.on_enter(self, self:get_text())
+		if self.style.UNSELECT_IS_ENTER then
+			self.on_input_enter:trigger(self:get_context(), self:get_text())
 		end
-
+			
 		self.style.on_unselect(self, self.button.node)
 
-		gui.set_enabled(self.placeholder.node, true and #(self.value .. self.marked_value) == 0)
+		gui.set_enabled(self.placeholder.node, true and utf8.len(self.value .. self.marked_value) == 0)
 		gui.set_enabled(self.cursor, false)
 	end
 end
@@ -475,7 +525,7 @@ end
 -- @tparam Input self @{Input}
 -- @treturn string The current input field text
 function UpgradedRichInput.get_text(self)
-	return utf8.sub(self.value, 1, self.cursor_shift) .. self.marked_value .. utf8.sub(self.value, #self.value + self.cursor_shift + 2, -1)
+	return utf8.sub(self.value, 1, self.cursor_shift) .. self.marked_value .. utf8.sub(self.value, utf8.len(self.value) + self.cursor_shift + 2, -1)
 end
 
 
