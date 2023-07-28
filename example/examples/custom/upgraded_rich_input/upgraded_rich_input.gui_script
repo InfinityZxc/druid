@@ -1,22 +1,32 @@
 local druid = require("druid.druid")
 
-local rich_input = require("druid.custom.rich_input.rich_input")
 local upgraded_rich_input = require("druid.custom.upgraded_rich_input.upgraded_rich_input")
+
+local function local_func(self, text)
+	gui.set_text(gui.get_node("upgraded_input_header_1"), "Something: " .. text)
+end
+
+function global_func(self, text)
+	gui.set_text(gui.get_node("upgraded_input_header_2"), "Something: " .. text)
+end
 
 function init(self)
 	self.druid = druid.new(self)
 	
-	self.druid:new_input("input_box_usual", "input_text_usual")
-	self.druid:new_input("input_box_password", "input_text_password", gui.KEYBOARD_TYPE_PASSWORD)
-	self.druid:new_input("input_box_email", "input_text_email", gui.KEYBOARD_TYPE_EMAIL)
-	self.druid:new_input("input_box_numpad", "input_text_numpad", gui.KEYBOARD_TYPE_NUMBER_PAD)
-		:set_allowed_characters("[%d,.]")
+	self.upgraded_rich_input_1 = self.druid:new(upgraded_rich_input, "upgraded_1")
+	self.upgraded_rich_input_1:set_placeholder("Enter text here")
+	self.upgraded_rich_input_1.on_input_enter:subscribe(local_func)
 
-	self.rich_input = self.druid:new(rich_input, "rich_input")
-	self.rich_input:set_placeholder("Enter text here")
+	self.upgraded_rich_input_2 = self.druid:new(upgraded_rich_input, "upgraded_2")
+	self.upgraded_rich_input_2:set_placeholder("Enter text here")
+	self.upgraded_rich_input_2.on_input_enter:subscribe(global_func)
 
-	self.upgraded_rich_input = self.druid:new(upgraded_rich_input, "upgraded")
-	self.upgraded_rich_input:set_placeholder("Enter text here")
+	named_func = function(self, text)
+		gui.set_text(gui.get_node("upgraded_input_header_3"), "Password: " .. text)
+	end
+	self.upgraded_rich_input_3 = self.druid:new(upgraded_rich_input, "upgraded_3", nil, gui.KEYBOARD_TYPE_PASSWORD)
+	self.upgraded_rich_input_3:set_placeholder("Enter text here")
+	self.upgraded_rich_input_3.on_input_enter:subscribe(named_func)
 end
 
 

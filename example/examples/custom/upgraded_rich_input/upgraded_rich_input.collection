@@ -1,4 +1,4 @@
-name: "input"
+name: "upgraded_rich_input"
 scale_along_z: 0
 embedded_instances {
   id: "go"

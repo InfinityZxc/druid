@@ -1,107 +1,13 @@
 local druid = require("druid.druid")
 
-local rich_input = require("druid.custom.rich_input.rich_input")
-local upgraded_rich_input = require("druid.custom.upgraded_rich_input.upgraded_rich_input")
-
-local function local_f(self, text)
-	gui.set_text(gui.get_node("upgraded_input_header_1"), "hi local " .. text)
-end
-
-function global_f(self, text)
-	gui.set_text(gui.get_node("upgraded_input_header_2"), "hi global " .. text)
-end
-
 function init(self)
 	self.druid = druid.new(self)
 
-	style_test = {}
-	style_test["input"] = {
-		IS_LONGTAP_ERASE = true,
-		BUTTON_SELECT_INCREASE = 1.06,
-		MASK_DEFAULT_CHAR = "*",
-		IS_UNSELECT_ON_RESELECT = false,
-
-		on_select = function(self, button_node)
-			local target_scale = self.button.start_scale
-			gui.animate(button_node, "scale", target_scale * style_test.input.BUTTON_SELECT_INCREASE, gui.EASING_OUTSINE, 0.15)
-		end,
-
-		on_unselect = function(self, button_node)
-			local start_scale = self.button.start_scale
-			gui.animate(button_node, "scale", start_scale, gui.EASING_OUTSINE, 0.15)
-		end,
-
-		on_input_wrong = function(self, button_node)
-			local start_pos = self.button.start_pos
-			gui.animate(button_node, "position.x", start_pos.x - 3, gui.EASING_OUTSINE, 0.05, 0, function()
-				gui.animate(button_node, "position.x", start_pos.x + 3, gui.EASING_OUTSINE, 0.1, 0, function()
-					gui.animate(button_node, "position.x", start_pos.x, gui.EASING_OUTSINE, 0.05)
-				end)
-			end)
-		end,
-
-		button = {
-			LONGTAP_TIME = 0.4,
-			AUTOHOLD_TRIGGER = 0.8,
-			DOUBLETAP_TIME = 0.4,
-		},
-	}
-	self.input_1 = self.druid:new_input("input_box_usual", "input_text_usual")
-	--self.input_1:set_style(style_test)
+	self.druid:new_input("input_box_usual", "input_text_usual")
 	self.druid:new_input("input_box_password", "input_text_password", gui.KEYBOARD_TYPE_PASSWORD)
 	self.druid:new_input("input_box_email", "input_text_email", gui.KEYBOARD_TYPE_EMAIL)
 	self.druid:new_input("input_box_numpad", "input_text_numpad", gui.KEYBOARD_TYPE_NUMBER_PAD)
-		:set_allowed_characters("[%d,.]")
-
-	----[[
-	hi_func = function(self, text)
-		gui.set_text(gui.get_node("upgraded_input_header_3"), "hi named " .. text)
-	end
-		
-	self.rich_input = self.druid:new(rich_input, "rich_input")
-	self.rich_input:set_placeholder("Enter text here")
-
-	style_test["druid.upgraded_rich_input"] = {
-		BUTTON_SELECT_INCREASE = 1.06,
-		
-		on_select = function(self, button_node)
-			local target_scale = self.button.start_scale
-			gui.animate(button_node, "scale", target_scale * style_test["druid.upgraded_rich_input"], gui.EASING_OUTSINE, 0.15)
-		end,
-
-		on_unselect = function(self, button_node)
-			local start_scale = self.button.start_scale
-			gui.animate(button_node, "scale", start_scale, gui.EASING_OUTSINE, 0.15)
-		end,
-
-		on_input_wrong = function(self, button_node)
-			local start_pos = self.button.start_pos
-			gui.animate(button_node, "position.x", start_pos.x - 3, gui.EASING_OUTSINE, 0.05, 0, function()
-				gui.animate(button_node, "position.x", start_pos.x + 3, gui.EASING_OUTSINE, 0.1, 0, function()
-					gui.animate(button_node, "position.x", start_pos.x, gui.EASING_OUTSINE, 0.05)
-				end)
-			end)
-		end,
-		
-		button = {
-			LONGTAP_TIME = 0.4,
-			AUTOHOLD_TRIGGER = 2.8,
-			DOUBLETAP_TIME = 0.4,
-		},
-	}
-	self.upgraded_rich_input_1 = self.druid:new(upgraded_rich_input, "upgraded_1")
-	self.upgraded_rich_input_1:set_placeholder("Enter text here")
-	self.upgraded_rich_input_1.on_input_enter:subscribe(local_f)
-	--self.upgraded_rich_input_1:set_style(style_test)
-
-	self.upgraded_rich_input_2 = self.druid:new(upgraded_rich_input, "upgraded_2")
-	self.upgraded_rich_input_2:set_placeholder("Enter text here")
-	self.upgraded_rich_input_2.on_input_enter:subscribe(global_f)
-
-	self.upgraded_rich_input_3 = self.druid:new(upgraded_rich_input, "upgraded_3")
-	self.upgraded_rich_input_3:set_placeholder("Enter text here")
-	self.upgraded_rich_input_3.on_input_enter:subscribe(hi_func)
-	----]]
+	:set_allowed_characters("[%d,.]")
 end
 
 

@@ -1,17 +1,23 @@
--- Copyright (c) 2021 Maksim Tuprikov <insality@gmail.com>. This code is licensed under MIT license
+-- Copyright (c) 2023. This code is licensed under MIT license
 
---- Druid input text component.
--- Carry on user text input
--- @author Part of code from Britzl gooey input component
--- @module Input
--- @within BaseComponent
--- @alias druid.input
+--- Druid Upgraded Rich Input custom component.
+-- It's wrapper on Input component with cursor and placeholder text
+-- @author Part of code from Britzl gooey input component /  Druid Rich Input custom component / Druid input text component
+-- @module UpgradedRichInput
+-- @within Input
+-- @alias druid.upgraded_rich_input
+
+--- The component druid instance
+-- @tfield DruidInstance druid @{DruidInstance}
 
 --- On input field select callback(self, button_node)
 -- @tfield DruidEvent on_input_select @{DruidEvent}
 
 --- On input field unselect callback(self, input_text)
 -- @tfield DruidEvent on_input_unselect @{DruidEvent}
+
+--- On input field enter callback(self, input_text)
+-- @tfield DruidEvent on_input_enter @{DruidEvent}
 
 --- On input field text change callback(self, input_text)
 -- @tfield DruidEvent on_input_text @{DruidEvent}
@@ -26,16 +32,43 @@
 -- @tfield DruidEvent on_input_wrong @{DruidEvent}
 
 --- Text component
--- @tfield Text text @{Text}
+-- @tfield druid.text text @{Text}
 
 --- Button component
--- @tfield Button button @{Button}
+-- @tfield druid.button button @{Button}
+
+--- Cursor node
+-- @tfield node cursor
+
+--- Outline node
+-- @tfield node outline
+
+--- Placeholder text
+-- @tfield druid.text placeholder @{Text}
 
 --- Is current input selected now
 -- @tfield bool is_selected
 
 --- Is current input is empty now
 -- @tfield bool is_empty
+
+--- Is some text outlined
+-- @tfield bool outlined
+
+--- Is all text outlined
+-- @tfield bool outlined_all
+
+--- Position of first outlined symbol
+-- @tfield number outline_from
+
+--- Position of last outlined symbol
+-- @tfield number outline_to
+
+--- Number to identify text split by cursor
+-- @tfield number cursor_shift
+
+--- Last recieved action
+-- @tfield table last_touch
 
 --- Max length for input text
 -- @tfield[opt] number max_length
@@ -79,33 +112,60 @@ local function mask_text(text, mask)
 	return masked_text
 end
 
+--- Delete all text in input field
+-- @tparam UpgradedRichInput self @{UpgradedRichInput}
 local function clear_text(self)
 	self.cursor_shift = -1
 	self:set_text("")
 end
 
+--- on_long_click callback
+-- @tparam UpgradedRichInput self @{UpgradedRichInput}
 local function clear_and_select(self)
 	if self.style.IS_LONGTAP_ERASE then
 		clear_text(self)
 	end
-
 	self:select()
 end
 
+--- Animate Cursor
+-- @tparam UpgradedRichInput self @{UpgradedRichInput}
 local function animate_cursor(self)
 	gui.cancel_animation(self.cursor, gui.PROP_COLOR)
 	gui.set_color(self.cursor, vmath.vector4(1))
 	gui.animate(self.cursor, gui.PROP_COLOR, vmath.vector4(1,1,1,0), gui.EASING_INSINE, 0.8, 0, nil, gui.PLAYBACK_LOOP_PINGPONG)
 end
 
+--- Calculates text width in case it is masked
+-- @tparam UpgradedRichInput self @{UpgradedRichInput}
+-- @tparam string text
+-- @treturn number text width
+local function visible_text_size(self, text)
+	-- mask text if password field
+	local masked_value
+	if self.keyboard_type == gui.KEYBOARD_TYPE_PASSWORD then
+		local mask_char = self.style.MASK_DEFAULT_CHAR or "*"
+		masked_value = mask_text(text, mask_char)
+	end
+
+	local value = masked_value or text
+
+	local text_width = self.text:get_text_size(value.."|") -  self.text:get_text_size("|")
+	return text_width
+end
+
+--- Move cursor
+-- @tparam UpgradedRichInput self @{UpgradedRichInput}
 local function position_cursor(self)
-	local before_cursor_text_size = self.text:get_text_size(utf8.sub(self:get_text(), 1, self.cursor_shift).."|") - self.text:get_text_size("|")
+	local before_cursor_text_size = visible_text_size(self, utf8.sub(self:get_text(), 1, self.cursor_shift))
 	gui.set_position(self.cursor, vmath.vector3(self.total_width/2 - (self.total_width - before_cursor_text_size), 0, 0))
 end
 
+--- If required resize and make visible outline node, make cursor node invisible
+-- @tparam UpgradedRichInput self @{UpgradedRichInput}
 local function outline_text(self)
 	if self.style.IS_DOUBLETAP_OUTLINE and self.is_selected then
-		if self.button.click_in_row == 2 then
+		if self.button.click_in_row == 2 and self.keyboard_type ~= gui.KEYBOARD_TYPE_PASSWORD then
 			self.marked_value = ""
 			self:update_text()
 			
@@ -121,16 +181,15 @@ local function outline_text(self)
 			end
 			
 			if self.outline_from <= self.outline_to then
-				local size_x = self.text:get_text_size(utf8.sub(text, self.outline_from, self.outline_to))
-				local before_from_text_size = self.text:get_text_size(utf8.sub(self:get_text(), 1, self.outline_from - utf8.len(text) - 2).."|") - self.text:get_text_size("|")
-				
+				local size_x = visible_text_size(self, utf8.sub(text, self.outline_from, self.outline_to))
+				local before_from_text_size = visible_text_size(self, utf8.sub(self:get_text(), 1, self.outline_from - utf8.len(text) - 2))
 				self.outlined = true
 				
 				gui.set_position(self.outline_node, vmath.vector3(self.total_width/2 - (self.total_width - before_from_text_size) + size_x / 2, 0, 0))
 				gui.set_size(self.outline_node, vmath.vector3(size_x, gui.get_size(self.text_node).y * gui.get_scale(self.text_node).y / 0.75 * gui.get_scale(self.text_node).y / 0.75, 0))
 				gui.set_enabled(self.outline_node, true)
 			end
-		elseif self.button.click_in_row == 3 then
+		elseif (self.style.IS_TRIPLETAP_OUTLINE_ALL and self.button.click_in_row == 3) or (self.style.IS_DOUBLETAP_OUTLINE and self.button.click_in_row == 2 and self.keyboard_type == gui.KEYBOARD_TYPE_PASSWORD) then
 			self.marked_value = ""
 			self:update_text()
 			self.outlined = true
@@ -143,6 +202,8 @@ local function outline_text(self)
 	end
 end
 
+--- Make outline node invisible, make cursor node visible
+-- @tparam UpgradedRichInput self @{UpgradedRichInput}
 local function cancel_outline(self)
 	self.outlined = false
 	self.outlined_all = false
@@ -151,6 +212,8 @@ local function cancel_outline(self)
 	animate_cursor(self)
 end
 
+--- Calculate cursor position from mouse touch coordinates
+-- @tparam UpgradedRichInput self @{UpgradedRichInput}
 local function find_cursor_shift(self)
 	if self.last_touch then
 		touch_x = self.last_touch.screen_x
@@ -172,10 +235,14 @@ end
 --- Component style params.
 -- You can override this component styles params in druid styles table
 -- or create your own style
+-- @tparam UpgradedRichInput self @{UpgradedRichInput}
 -- @table style
 -- @tfield[opt=false] bool IS_LONGTAP_ERASE Is long tap will erase current input data
 -- @tfield[opt=*] string MASK_DEFAULT_CHAR Default character mask for password input
 -- @tfield[opt=false] bool IS_UNSELECT_ON_RESELECT If true, call unselect on select selected input
+-- @tfield[opt=false] bool IS_DOUBLETAP_OUTLINE If true, call outline_text on double tap
+-- @tfield[opt=false] bool IS_TRIPLETAP_OUTLINE_ALL If true, outline_text checks for third consecutive tap
+-- @tfield[opt=false] bool UNSELECT_IS_ENTER If true, call on_input_enter on unselect input
 -- @tfield function on_select (self, button_node) Callback on input field selecting
 -- @tfield function on_unselect (self, button_node) Callback on input field unselecting
 -- @tfield function on_input_wrong (self, button_node) Callback on wrong user input
@@ -203,9 +270,9 @@ end
 
 
 --- Component init function
--- @tparam Input self @{Input}
--- @tparam node click_node Button node to enabled input component
--- @tparam node|Text text_node Text node what will be changed on user input. You can pass text component instead of text node name @{Text}
+-- @tparam UpgradedRichInput self @{UpgradedRichInput}
+-- @tparam string template The template string name
+-- @tparam table nodes Nodes table from gui.clone_tree
 -- @tparam[opt] number keyboard_type Gui keyboard type for input field
 function UpgradedRichInput.init(self, template, nodes, keyboard_type)
 	self:set_template(template)
@@ -266,7 +333,7 @@ function UpgradedRichInput.init(self, template, nodes, keyboard_type)
 	self:set_text(self.value)
 end
 
-
+--- Component on_input function
 function UpgradedRichInput.on_input(self, action_id, action)
 	self.last_touch = action
 	if self.is_selected then
@@ -287,6 +354,7 @@ function UpgradedRichInput.on_input(self, action_id, action)
 					if self.outlined then
 						if self.outlined_all then
 							clear_text(self)
+							action.textinput_text = action.text
 						else
 							self.cursor_shift = self.outline_to - utf8.len(self.value) - 1
 							input_text = utf8.sub(self.value, 1, self.outline_from - 1) .. action.text .. utf8.sub(self.value, self.outline_to + 1, -1)
@@ -388,7 +456,8 @@ function UpgradedRichInput.on_input_interrupt(self)
 	-- self:unselect()
 end
 
-
+--- Update visible text
+-- @tparam UpgradedRichInput self @{UpgradedRichInput}
 function UpgradedRichInput.update_text(self)
 	-- mask text if password field
 	local masked_value, masked_marked_value
@@ -412,7 +481,7 @@ function UpgradedRichInput.update_text(self)
 end
 
 --- Set text for input field
--- @tparam Input self @{Input}
+-- @tparam UpgradedRichInput self @{UpgradedRichInput}
 -- @tparam string input_text The string to apply for input field
 function UpgradedRichInput.set_text(self, input_text)
 	-- Case when update with marked text
@@ -463,7 +532,7 @@ end
 
 
 --- Select input field. It will show the keyboard and trigger on_select events
--- @tparam Input self @{Input}
+-- @tparam UpgradedRichInput self @{UpgradedRichInput}
 function UpgradedRichInput.select(self)
 	gui.reset_keyboard()
 	self.marked_value = ""
@@ -495,7 +564,7 @@ end
 
 
 --- Remove selection from input. It will hide the keyboard and trigger on_unselect events
--- @tparam Input self @{Input}
+-- @tparam UpgradedRichInput self @{UpgradedRichInput}
 function UpgradedRichInput.unselect(self)
 	gui.reset_keyboard()
 	self.marked_value = ""
@@ -522,7 +591,7 @@ end
 
 
 --- Return current input field text
--- @tparam Input self @{Input}
+-- @tparam UpgradedRichInput self @{UpgradedRichInput}
 -- @treturn string The current input field text
 function UpgradedRichInput.get_text(self)
 	return utf8.sub(self.value, 1, self.cursor_shift) .. self.marked_value .. utf8.sub(self.value, utf8.len(self.value) + self.cursor_shift + 2, -1)
@@ -531,9 +600,9 @@ end
 
 --- Set maximum length for input field.
 -- Pass nil to make input field unliminted (by default)
--- @tparam Input self @{Input}
+-- @tparam UpgradedRichInput self @{UpgradedRichInput}
 -- @tparam number max_length Maximum length for input text field
--- @treturn druid.input Current input instance
+-- @treturn druid.upgraded_rich_input Current input instance
 function UpgradedRichInput.set_max_length(self, max_length)
 	self.max_length = max_length
 	return self
@@ -543,9 +612,9 @@ end
 --- Set allowed charaters for input field.
 -- See: https://defold.com/ref/stable/string/
 -- ex: [%a%d] for alpha and numeric
--- @tparam Input self @{Input}
+-- @tparam UpgradedRichInput self @{UpgradedRichInput}
 -- @tparam string characters Regulax exp. for validate user input
--- @treturn druid.input Current input instance
+-- @treturn druid.upgraded_rich_input Current input instance
 function UpgradedRichInput.set_allowed_characters(self, characters)
 	self.allowed_characters = characters
 	return self
@@ -553,13 +622,14 @@ end
 
 
 --- Reset current input selection and return previous value
--- @tparam Input self @{Input}
+-- @tparam UpgradedRichInput self @{UpgradedRichInput}
 function UpgradedRichInput.reset_changes(self)
 	self:set_text(self.previous_value)
 	self:unselect()
 end
 
-
+--- Set placeholder text
+-- @tparam UpgradedRichInput self @{UpgradedRichInput}
 function UpgradedRichInput.set_placeholder(self, placeholder_text)
 	self.placeholder:set_to(placeholder_text)
 	return self
