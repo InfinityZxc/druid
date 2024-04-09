@@ -14,6 +14,9 @@ By default, **Druid** utilizes the `/builtins/input/all.input_binding` for input
 - Key trigger: `Back` -> `key_back` (for BackHandler component, Android back button, input component)
 - Key trigger: `Enter` -> `key_enter` (for Input component, optional)
 - Key trigger: `Esc` -> `key_esc` (for Input component, optional)
+- Key trigger: `Left` -> `key_left` (for Input component, optional)
+- Key trigger: `Right` -> `key_right` (for Input component, optional)
+- Key trigger: `Shift` -> `key_lshift` (for Input component, optional)
 - Touch triggers: `Touch multi` -> `touch_multi` (for Scroll component)
 
 ![](../media/input_binding_2.png)
@@ -37,6 +40,9 @@ input_key_backspace = key_backspace
 input_multitouch = touch_multi
 input_scroll_up = mouse_wheel_up
 input_scroll_down = mouse_wheel_down
+input_key_left = key_left
+input_key_right = key_right
+input_key_lshift = key_lshift
 ```
 
 

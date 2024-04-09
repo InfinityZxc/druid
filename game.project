@@ -40,6 +40,9 @@ input_key_backspace = key_backspace
 input_multitouch = touch_multi
 input_scroll_up = mouse_wheel_up
 input_scroll_down = mouse_wheel_down
+input_key_left = key_left
+input_key_right = key_right
+input_key_lshift = key_lshift
 
 [html5]
 engine_arguments = --verify-graphics-calls=false

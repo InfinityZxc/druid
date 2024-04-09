@@ -119,7 +119,7 @@ M["swipe"] = {
 
 
 M["input"] = {
-	IS_LONGTAP_ERASE = true,
+	IS_LONGTAP_ERASE = false,
 	BUTTON_SELECT_INCREASE = 1.06,
 	MASK_DEFAULT_CHAR = "*",
 	IS_UNSELECT_ON_RESELECT = false,

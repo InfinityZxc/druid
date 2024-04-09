@@ -651,6 +651,7 @@ function druid__hover.set_mouse_hover(self, state) end
 ---@field on_input_text druid.event On input field text change callback(self, input_text)
 ---@field on_input_unselect druid.event On input field unselect callback(self, input_text)
 ---@field on_input_wrong druid.event On trying user input with not allowed character callback(self, params, button_instance)
+---@field on_select_cursor_change druid.event On input field cursor change callback(self, start_index, end_index)
 ---@field style druid.input.style Component style params.
 ---@field text druid.text Text component
 local druid__input = {}

@@ -27,8 +27,35 @@
 --- On trying user input with not allowed character callback(self, params, button_instance)
 -- @tfield DruidEvent on_input_wrong @{DruidEvent}
 
+--- On cursor position change callback(self, start_index, end_index)
+-- @tfield DruidEvent on_select_cursor_change @{DruidEvent}
+
+--- The cursor selection start index. The index of letter cursor after. Leftmost selection - 0
+-- @function start_index
+
+--- The cursor selection end index. The index of letter cursor before. Rightmost selection - #text
+-- @function end_index
+
 --- Text component
 -- @tfield Text text @{Text}
+
+--- Current input value
+-- @tfield string value
+
+--- Previous input value
+-- @tfield string previous_value
+
+--- Current input value with marked text
+-- @tfield string current_value
+
+--- Marked text for input field. Info: https://defold.com/manuals/input-key-and-text/#marked-text
+-- @tfield string marked_value
+
+--- Text width
+-- @tfield number text_width
+
+--- Marked text width
+-- @tfield number marked_text_width
 
 --- Button component
 -- @tfield Button button @{Button}
@@ -53,6 +80,7 @@
 local Event = require("druid.event")
 local const = require("druid.const")
 local component = require("druid.component")
+local helper = require("druid.helper")
 local utf8_lua = require("druid.system.utf8")
 local utf8 = utf8 or utf8_lua
 
@@ -90,7 +118,6 @@ end
 -- @tfield[opt=false] boolean IS_LONGTAP_ERASE Is long tap will erase current input data
 -- @tfield[opt=*] string MASK_DEFAULT_CHAR Default character mask for password input
 -- @tfield[opt=false] boolean IS_UNSELECT_ON_RESELECT If true, call unselect on select selected input
--- @tfield[opt=false] boolean NO_CONSUME_INPUT_WHILE_SELECTED If true, will not consume input while input is selected. It's allow to interact with other components while input is selected (text input still captured)
 -- @tfield function on_select (self, button_node) Callback on input field selecting
 -- @tfield function on_unselect (self, button_node) Callback on input field unselecting
 -- @tfield function on_input_wrong (self, button_node) Callback on wrong user input
@@ -101,7 +128,6 @@ function Input.on_style_change(self, style)
 	self.style.IS_LONGTAP_ERASE = style.IS_LONGTAP_ERASE or false
 	self.style.MASK_DEFAULT_CHAR = style.MASK_DEFAULT_CHAR or "*"
 	self.style.IS_UNSELECT_ON_RESELECT = style.IS_UNSELECT_ON_RESELECT or false
-	self.style.NO_CONSUME_INPUT_WHILE_SELECTED = style.NO_CONSUME_INPUT_WHILE_SELECTED or false
 
 	self.style.on_select = style.on_select or function(_, button_node) end
 	self.style.on_unselect = style.on_unselect or function(_, button_node) end
@@ -139,6 +165,8 @@ function Input.init(self, click_node, text_node, keyboard_type)
 	self.text_width = 0
 	self.market_text_width = 0
 	self.total_width = 0
+	self.start_index = utf8.len(self.value)
+	self.end_index = utf8.len(self.value)
 
 	self.max_length = nil
 	self.allowed_characters = nil
@@ -160,13 +188,40 @@ function Input.init(self, click_node, text_node, keyboard_type)
 	self.on_input_empty = Event()
 	self.on_input_full = Event()
 	self.on_input_wrong = Event()
+	self.on_select_cursor_change = Event()
 end
 
 
 function Input.on_input(self, action_id, action)
 	if self.is_selected then
 		local input_text = nil
-		local marked_text = nil
+		local is_marked_text_changed = false
+		local cursor_shift_indexes = nil
+
+		if action_id == const.ACTION_LSHIFT then
+			if action.pressed then
+				self._is_lshift = true
+			elseif action.released then
+				self._is_lshift = false
+			end
+		end
+
+		if action_id == const.ACTION_LEFT and (action.pressed or action.repeated) then
+			if not self._is_lshift then
+				self:select_cursor(self.start_index - 1, self.start_index - 1)
+			else
+				self:select_cursor(self.start_index - 1, self.end_index)
+			end
+		end
+
+		if action_id == const.ACTION_RIGHT and (action.pressed or action.repeated) then
+			if not self._is_lshift then
+				self:select_cursor(self.end_index + 1, self.end_index + 1)
+			else
+				self:select_cursor(self.start_index, self.end_index + 1)
+			end
+		end
+
 		if action_id == const.ACTION_TEXT then
 			-- ignore return key
 			if action.text == "\n" or action.text == "\r" then
@@ -180,7 +235,15 @@ function Input.on_input(self, action_id, action)
 			-- ignore arrow keys
 			if not utf8.match(hex, "EF9C8[0-3]") then
 				if not self.allowed_characters or utf8.match(action.text, self.allowed_characters) then
-					input_text = self.value .. action.text
+					--input_text = self.value .. action.text
+					local start_index = self.start_index
+					local end_index = self.end_index
+
+					local left_part = utf8.sub(self.value, 1, start_index)
+					local right_part = utf8.sub(self.value, end_index + 1, utf8.len(self.value))
+					input_text = left_part .. action.text .. right_part
+					cursor_shift_indexes = utf8.len(action.text)
+
 					if self.max_length then
 						input_text = utf8.sub(input_text, 1, self.max_length)
 					end
@@ -197,11 +260,27 @@ function Input.on_input(self, action_id, action)
 			if self.max_length then
 				self.marked_value = utf8.sub(self.marked_value, 1, self.max_length)
 			end
-			marked_text = self.marked_value
+			is_marked_text_changed = true
 		end
 
 		if action_id == const.ACTION_BACKSPACE and (action.pressed or action.repeated) then
-			input_text = utf8.sub(self.value, 1, -2)
+			local start_index = self.start_index or utf8.len(self.value)
+			local end_index = self.end_index or utf8.len(self.value)
+
+			-- If start == end index, remove left of this selection letter, else delete all selection
+			if start_index == end_index then
+				local left_part = utf8.sub(self.value, 1, math.max(0, start_index - 1))
+				local right_part = utf8.sub(self.value, end_index + 1, utf8.len(self.value))
+				input_text = left_part .. right_part
+
+				cursor_shift_indexes = -1
+			else
+				local left_part = utf8.sub(self.value, 1, start_index)
+				local right_part = utf8.sub(self.value, end_index + 1, utf8.len(self.value))
+				input_text = left_part .. right_part
+
+				cursor_shift_indexes = 0
+			end
 		end
 
 		if action_id == const.ACTION_ENTER and action.released then
@@ -219,14 +298,23 @@ function Input.on_input(self, action_id, action)
 			return true
 		end
 
-		if input_text or marked_text then
+		if input_text or is_marked_text_changed then
 			self:set_text(input_text)
+
+			if cursor_shift_indexes then
+				self:select_cursor(self.start_index + cursor_shift_indexes, self.start_index + cursor_shift_indexes)
+			end
+
 			return true
 		end
 	end
 
-	local is_consume_input = not self.style.NO_CONSUME_INPUT_WHILE_SELECTED and self.is_selected
-	return is_consume_input
+	local is_mouse_action = action_id == const.ACTION_TOUCH or not action_id
+	if is_mouse_action then
+		return false
+	end
+
+	return self.is_selected
 end
 
 
@@ -362,9 +450,31 @@ end
 
 --- Reset current input selection and return previous value
 -- @tparam Input self @{Input}
+-- @treturn druid.input Current input instance
 function Input.reset_changes(self)
 	self:set_text(self.previous_value)
 	self:unselect()
+	return self
+end
+
+
+--- Set cursor position in input field
+-- @tparam Input self @{Input}
+-- @tparam number|nils start_index Start index for cursor position, if nil - will be set to the end of the text
+-- @tparam number|nil end_index End index for cursor position, if nil - will be set to the start_index
+-- @treturn druid.input Current input instance
+function Input.select_cursor(self, start_index, end_index)
+	local len = utf8.len(self.value)
+
+	self.start_index = start_index or len
+	self.end_index = end_index or self.start_index
+
+	self.start_index = helper.clamp(self.start_index, 0, len)
+	self.end_index = helper.clamp(self.end_index, 0, len)
+
+	self.on_select_cursor_change:trigger(self:get_context(), self.start_index, self.end_index)
+
+	return self
 end
 
 
