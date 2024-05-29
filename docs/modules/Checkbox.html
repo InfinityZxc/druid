@@ -3,7 +3,7 @@
 <html>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 <head>
-    <title>Defold Druid UI Library</title>
+    <title>Defold Druid UI Framework</title>
     <link rel="stylesheet" href="../ldoc_fixed.css" type="text/css" />
 </head>
 <body>
@@ -48,6 +48,7 @@
   <li><a href="../modules/CheckboxGroup.html">CheckboxGroup</a></li>
   <li><a href="../modules/DataList.html">DataList</a></li>
   <li><a href="../modules/Drag.html">Drag</a></li>
+  <li><a href="../modules/Druid.html">Druid</a></li>
   <li><a href="../modules/DruidEvent.html">DruidEvent</a></li>
   <li><a href="../modules/DruidInstance.html">DruidInstance</a></li>
   <li><a href="../modules/DynamicGrid.html">DynamicGrid</a></li>
@@ -61,13 +62,13 @@
   <li><a href="../modules/Progress.html">Progress</a></li>
   <li><a href="../modules/RadioGroup.html">RadioGroup</a></li>
   <li><a href="../modules/RichInput.html">RichInput</a></li>
+  <li><a href="../modules/RichText.html">RichText</a></li>
   <li><a href="../modules/Scroll.html">Scroll</a></li>
   <li><a href="../modules/Slider.html">Slider</a></li>
   <li><a href="../modules/StaticGrid.html">StaticGrid</a></li>
   <li><a href="../modules/Swipe.html">Swipe</a></li>
   <li><a href="../modules/Text.html">Text</a></li>
   <li><a href="../modules/Timer.html">Timer</a></li>
-  <li><a href="../modules/druid.html">druid</a></li>
 </ul>
 
 </div>
@@ -76,7 +77,7 @@
 
 <h1>Module <code>Checkbox</code></h1>
 <p>Druid checkbox component</p>
-<p></p>
+<p> <a href="https://insality.github.io/druid/druid/index.html?example=general_checkboxes" target="_blank"><b>Example Link</b></a></p>
 
 
 <h2><a href="#Functions">Functions</a></h2>
@@ -87,7 +88,7 @@
 	</tr>
 	<tr>
 	<td class="name" nowrap><a href="#init">init(self, node, callback[, click_node=node[, initial_state=false]])</a></td>
-	<td class="summary">Component init function</td>
+	<td class="summary">The <a href="../modules/Checkbox.html#">Checkbox</a> constructor</td>
 	</tr>
 	<tr>
 	<td class="name" nowrap><a href="#set_state">set_state(self, state, is_silent, is_instant)</a></td>
@@ -147,7 +148,7 @@
     <h3>Returns:</h3>
     <ol>
 
-           <span class="types"><span class="type">bool</span></span>
+           <span class="types"><span class="type">boolean</span></span>
         Checkbox state
     </ol>
 
@@ -160,7 +161,7 @@
     <strong>init(self, node, callback[, click_node=node[, initial_state=false]])</strong>
     </dt>
     <dd>
-    Component init function
+    The <a href="../modules/Checkbox.html#">Checkbox</a> constructor
 
 
     <h3>Parameters:</h3>
@@ -209,15 +210,15 @@
          <a href="../modules/Checkbox.html#">Checkbox</a>
         </li>
         <li><span class="parameter">state</span>
-            <span class="types"><span class="type">bool</span></span>
+            <span class="types"><span class="type">boolean</span> or <span class="type">nil</span></span>
          Checkbox state
         </li>
         <li><span class="parameter">is_silent</span>
-            <span class="types"><span class="type">bool</span></span>
+            <span class="types"><span class="type">boolean</span> or <span class="type">nil</span></span>
          Don't trigger on_change_state if true
         </li>
         <li><span class="parameter">is_instant</span>
-            <span class="types"><span class="type">bool</span></span>
+            <span class="types"><span class="type">boolean</span> or <span class="type">nil</span></span>
          If instant checkbox change
         </li>
     </ul>

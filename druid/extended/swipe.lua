@@ -3,6 +3,8 @@
 --- Component to handle swipe gestures on node.
 -- Swipe will be triggered, if swipe was started and
 -- ended on one node
+--
+-- <a href="https://insality.github.io/druid/druid/index.html?example=general_swipe" target="_blank"><b>Example Link</b></a>
 -- @module Swipe
 -- @within BaseComponent
 -- @alias druid.swipe
@@ -11,7 +13,7 @@
 -- @tparam node node
 
 --- Restriction zone
--- @tparam[opt] node click_zone
+-- @tparam node|nil click_zone
 
 --- Trigger on swipe event(self, swipe_side, dist, delta_time)
 -- @tfield DruidEvent on_swipe) @{DruidEvent}
@@ -74,7 +76,7 @@ end
 -- @table style
 -- @tfield[opt=0.4] number SWIPE_TIME Maximum time for swipe trigger
 -- @tfield[opt=50] number SWIPE_THRESHOLD Minimum distance for swipe trigger
--- @tfield[opt=false] bool SWIPE_TRIGGER_ON_MOVE If true, trigger on swipe moving, not only release action
+-- @tfield[opt=false] boolean SWIPE_TRIGGER_ON_MOVE If true, trigger on swipe moving, not only release action
 function Swipe.on_style_change(self, style)
 	self.style = {}
 	self.style.SWIPE_TIME = style.SWIPE_TIME or 0.4
@@ -83,7 +85,7 @@ function Swipe.on_style_change(self, style)
 end
 
 
---- Component init function
+--- The @{Swipe} constructor
 -- @tparam Swipe self @{Swipe}
 -- @tparam node node Gui node
 -- @tparam function on_swipe_callback Swipe callback for on_swipe_end event
@@ -114,15 +116,11 @@ function Swipe.on_input(self, action_id, action)
 		return false
 	end
 
-	if not helper.is_enabled(self.node) then
+	if not gui.is_enabled(self.node, true) then
 		return false
 	end
 
-	local is_pick = gui.pick_node(self.node, action.x, action.y)
-	if self.click_zone then
-		is_pick = is_pick and gui.pick_node(self.click_zone, action.x, action.y)
-	end
-
+	local is_pick = helper.pick_node(self.node, action.x, action.y, self.click_zone)
 	if not is_pick then
 		reset_swipe(self, action)
 		return false

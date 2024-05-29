@@ -31,19 +31,25 @@
 ---
 
 local Event = require("druid.event")
-local formats = require("druid.helper.formats")
 local helper = require("druid.helper")
 local component = require("druid.component")
 
 local Timer = component.create("timer")
 
 
---- Component init function
+local function second_string_min(sec)
+	local mins = math.floor(sec / 60)
+	local seconds = math.floor(sec - mins * 60)
+	return string.format("%.2d:%.2d", mins, seconds)
+end
+
+
+--- The @{Timer} constructor
 -- @tparam Timer self @{Timer}
 -- @tparam node node Gui text node
 -- @tparam number seconds_from Start timer value in seconds
--- @tparam[opt=0] number seconds_to End timer value in seconds
--- @tparam[opt] function callback Function on timer end
+-- @tparam number|nil seconds_to End timer value in seconds
+-- @tparam function|nil callback Function on timer end
 function Timer.init(self, node, seconds_from, seconds_to, callback)
 	self.node = self:get_node(node)
 	seconds_from = math.max(seconds_from, 0)
@@ -98,13 +104,13 @@ end
 -- @tparam number set_to Value in seconds
 function Timer.set_to(self, set_to)
 	self.last_value = set_to
-	gui.set_text(self.node, formats.second_string_min(set_to))
+	gui.set_text(self.node, second_string_min(set_to))
 end
 
 
 --- Called when update
 -- @tparam Timer self @{Timer}
--- @tparam bool is_on Timer enable state
+-- @tparam boolean|nil is_on Timer enable state
 function Timer.set_state(self, is_on)
 	self.is_on = is_on
 

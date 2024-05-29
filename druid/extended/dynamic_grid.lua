@@ -1,6 +1,8 @@
 -- Copyright (c) 2021 Maksim Tuprikov <insality@gmail.com>. This code is licensed under MIT license
 
 --- Component to handle placing components in row
+--
+-- <a href="https://insality.github.io/druid/druid/index.html?example=general_grid" target="_blank"><b>Example Link</b></a>
 -- @module DynamicGrid
 -- @within BaseComponent
 -- @alias druid.dynamic_grid
@@ -63,7 +65,7 @@ local AVAILABLE_PIVOTS = {
 }
 
 
---- Component init function
+--- The @{DynamicGrid} constructor
 -- @tparam DynamicGrid self @{DynamicGrid}
 -- @tparam node parent The gui node parent, where items will be placed
 function DynamicGrid.init(self, parent)
@@ -98,7 +100,7 @@ end
 -- @tparam DynamicGrid self @{DynamicGrid}
 -- @tparam number index The grid element index
 -- @tparam node node The node to be placed
--- @tparam[opt] number origin_index Index of nearby node
+-- @tparam number|nil origin_index Index of nearby node
 -- @treturn vector3 Node position
 function DynamicGrid.get_pos(self, index, node, origin_index)
 	local origin_node = self.nodes[origin_index]
@@ -118,7 +120,7 @@ function DynamicGrid.get_pos(self, index, node, origin_index)
 		assert(not self.first_index, "Dynamic Grid can't have gaps between nodes. Error on grid:add")
 
 		-- If not origin node, so it should be first element in the grid
-		local size = self:_get_node_size(node)
+		local size = helper.get_scaled_size(node)
 		local pivot = const.PIVOTS[gui.get_pivot(node)]
 		return vmath.vector3(
 			size.x * pivot.x - size.x * self.pivot.x,
@@ -138,9 +140,9 @@ end
 --- Add new node to the grid
 -- @tparam DynamicGrid self @{DynamicGrid}
 -- @tparam node node Gui node
--- @tparam[opt] number index The node position. By default add as last node
--- @tparam[opt=SHIFT.RIGHT] number shift_policy How shift nodes, if required. See const.SHIFT
--- @tparam[opt=false] boolean is_instant If true, update node positions instantly
+-- @tparam number|nil index The node position. By default add as last node
+-- @tparam number|nil shift_policy How shift nodes, if required. Default: const.SHIFT.RIGHT
+-- @tparam boolean|nil is_instant If true, update node positions instantly
 function DynamicGrid.add(self, node, index, shift_policy, is_instant)
 	shift_policy = shift_policy or const.SHIFT.RIGHT
 	local delta = shift_policy -- -1 or 1 or 0
@@ -181,8 +183,8 @@ end
 --- Remove the item from the grid. Note that gui node will be not deleted
 -- @tparam DynamicGrid self @{DynamicGrid}
 -- @tparam number index The grid node index to remove
--- @tparam[opt=SHIFT.RIGHT] number shift_policy How shift nodes, if required. See const.SHIFT
--- @tparam[opt=false] boolean is_instant If true, update node positions instantly
+-- @tparam number|nil shift_policy How shift nodes, if required. Default: const.SHIFT.RIGHT
+-- @tparam boolean|nil is_instant If true, update node positions instantly
 -- @treturn node The deleted gui node from grid
 function DynamicGrid.remove(self, index, shift_policy, is_instant)
 	shift_policy = shift_policy or const.SHIFT.RIGHT
@@ -272,7 +274,7 @@ end
 function DynamicGrid.get_all_pos(self)
 	local result = {}
 	for i, node in pairs(self.nodes) do
-		table.insert(result, gui.get_position(node))
+		table.insert(result, gui.get_position(node.node))
 	end
 
 	return result
@@ -308,7 +310,7 @@ function DynamicGrid._add_node(self, node, index, origin_index)
 	self.nodes[index] = {
 		node = node,
 		pos = self:get_pos(index, node, origin_index),
-		size = self:_get_node_size(node),
+		size = helper.get_scaled_size(node),
 		pivot = const.PIVOTS[gui.get_pivot(node)]
 	}
 
@@ -320,7 +322,7 @@ end
 
 --- Update grid inner state
 -- @tparam DynamicGrid self @{DynamicGrid}
--- @tparam bool is_instant If true, node position update instantly, otherwise with set_position_function callback
+-- @tparam boolean|nil is_instant If true, node position update instantly, otherwise with set_position_function callback
 -- @local
 function DynamicGrid._update(self, is_instant)
 	self:_update_indexes()
@@ -376,7 +378,7 @@ end
 
 --- Update grid nodes position
 -- @tparam DynamicGrid self @{DynamicGrid}
--- @tparam bool is_instant If true, node position update instantly, otherwise with set_position_function callback
+-- @tparam boolean|nil is_instant If true, node position update instantly, otherwise with set_position_function callback
 -- @local
 function DynamicGrid._update_pos(self, is_instant)
 	for index, node in pairs(self.nodes) do
@@ -394,7 +396,7 @@ end
 function DynamicGrid._get_next_node_pos(self, origin_node_index, new_node, place_side)
 	local node = self.nodes[origin_node_index]
 
-	local new_node_size = self:_get_node_size(new_node)
+	local new_node_size = helper.get_scaled_size(new_node)
 	local new_pivot = const.PIVOTS[gui.get_pivot(new_node)]
 
 	local dist_x = (node.size.x/2 + new_node_size.x/2) * place_side.x
@@ -407,11 +409,6 @@ function DynamicGrid._get_next_node_pos(self, origin_node_index, new_node, place
 		node_center_y - dist_y + new_node_size.y * new_pivot.y,
 		0
 	)
-end
-
-
-function DynamicGrid._get_node_size(self, node)
-	return vmath.mul_per_elem(gui.get_size(node), gui.get_scale(node))
 end
 
 

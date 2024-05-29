@@ -21,7 +21,7 @@ local component = require("druid.component")
 local Hover = component.create("hover")
 
 
---- Component init function
+--- The @{Hover} constructor
 -- @tparam Hover self @{Hover}
 -- @tparam node node Gui node
 -- @tparam function on_hover_callback Hover callback
@@ -58,17 +58,13 @@ function Hover.on_input(self, action_id, action)
 		return false
 	end
 
-	if not helper.is_enabled(self.node) or not self._is_enabled then
+	if not gui.is_enabled(self.node, true) or not self._is_enabled then
 		self:set_hover(false)
 		self:set_mouse_hover(false)
 		return false
 	end
 
-	local is_pick = gui.pick_node(self.node, action.x, action.y)
-	if self.click_zone then
-		is_pick = is_pick and gui.pick_node(self.click_zone, action.x, action.y)
-	end
-
+	local is_pick = helper.pick_node(self.node, action.x, action.y, self.click_zone)
 	local hover_function = action_id and self.set_hover or self.set_mouse_hover
 
 	if not is_pick then
@@ -93,7 +89,7 @@ end
 
 --- Set hover state
 -- @tparam Hover self @{Hover}
--- @tparam bool state The hover state
+-- @tparam boolean|nil state The hover state
 function Hover.set_hover(self, state)
 	if self._is_hovered ~= state then
 		self._is_hovered = state
@@ -104,7 +100,7 @@ end
 
 --- Return current hover state. True if touch action was on the node at current time
 -- @tparam Hover self @{Hover}
--- @treturn bool The current hovered state
+-- @treturn boolean The current hovered state
 function Hover.is_hovered(self)
 	return self._is_hovered
 end
@@ -112,7 +108,7 @@ end
 
 --- Set mouse hover state
 -- @tparam Hover self @{Hover}
--- @tparam bool state The mouse hover state
+-- @tparam boolean|nil state The mouse hover state
 function Hover.set_mouse_hover(self, state)
 	if self._is_mouse_hovered ~= state then
 		self._is_mouse_hovered = state
@@ -123,7 +119,7 @@ end
 
 --- Return current hover state. True if nil action_id (usually desktop mouse) was on the node at current time
 -- @tparam Hover self @{Hover}
--- @treturn bool The current hovered state
+-- @treturn boolean The current hovered state
 function Hover.is_mouse_hovered(self)
 	return self._is_mouse_hovered
 end
@@ -142,7 +138,7 @@ end
 -- If hover is not enabled, it will not generate
 -- any hover events
 -- @tparam Hover self @{Hover}
--- @tparam bool state The hover enabled state
+-- @tparam boolean|nil state The hover enabled state
 function Hover.set_enabled(self, state)
 	self._is_enabled = state
 
@@ -159,7 +155,7 @@ end
 
 --- Return current hover enabled state
 -- @tparam Hover self @{Hover}
--- @treturn bool The hover enabled state
+-- @treturn boolean The hover enabled state
 function Hover.is_enabled(self)
 	return self._is_enabled
 end

@@ -14,7 +14,7 @@ You can pass _nil_ or _empty_table_ to use default values for all components (no
 local druid = require("druid.druid")
 local my_style = require("my.amazing.style")
 
-local function init(self)
+function init(self)
 	druid.set_default_style(my_style)
 end
 ```
@@ -24,7 +24,7 @@ Setup custom style to specific druid instance:
 local druid = require("druid.druid")
 local my_style = require("my.amazing.style")
 
-local function init(self)
+function init(self)
 	-- This druid instance will be use my_style as default
 	self.druid = druid.new(self, my_style)
 end
@@ -35,7 +35,7 @@ Change component style with _set_style_ function
 local druid = require("druid.druid")
 local my_style = require("my.amazing.style")
 
-local function init(self)
+function init(self)
 	self.druid = druid.new(self)
 	self.button = self.druid:new_button("node", function() end)
 	-- Setup custom style for specific component
@@ -46,11 +46,11 @@ end
 
 ## Create your own styles
 
-The most components have their styles. You can explore it on [Druid API](https://insality.github.io/druid/) in table style section ([button example](https://insality.github.io/druid/modules/druid.button.html#Style)). Or you can see, what fields component uses in code in function `on_style_change`
+The most components have their styles. You can explore it on [Druid API](https://insality.github.io/druid/) in table style section ([button example](https://insality.github.io/druid/modules/Button.html#style)). Or you can see, what fields component uses in code in function `on_style_change`
 
 To create you style, create lua module, what return <_component_name_, _component_style_> table
 
-Example: [default druid style](styles/default/style.lua)
+Example: [default druid style](https://github.com/Insality/druid/blob/master/druid/styles/default/style.lua)
 
 Override all fields you want and set your style with one of next ways:
 

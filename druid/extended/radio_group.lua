@@ -1,6 +1,8 @@
 -- Copyright (c) 2021 Maksim Tuprikov <insality@gmail.com>. This code is licensed under MIT license
 
 --- Radio group module
+--
+-- <a href="https://insality.github.io/druid/druid/index.html?example=general_checkboxes" target="_blank"><b>Example Link</b></a>
 -- @module RadioGroup
 -- @within BaseComponent
 -- @alias druid.radio_group
@@ -28,7 +30,7 @@ local function on_checkbox_click(self, index, is_instant)
 end
 
 
---- Component init function
+--- The @{RadioGroup} constructor
 -- @tparam RadioGroup self @{RadioGroup}
 -- @tparam node[] nodes Array of gui node
 -- @tparam function callback Radio callback
@@ -53,7 +55,7 @@ end
 --- Set radio group state
 -- @tparam RadioGroup self @{RadioGroup}
 -- @tparam number index Index in radio group
--- @tparam boolean is_instant If is instant state change
+-- @tparam boolean|nil is_instant If is instant state change
 function RadioGroup.set_state(self, index, is_instant)
 	on_checkbox_click(self, index, is_instant)
 end

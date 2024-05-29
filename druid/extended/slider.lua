@@ -1,6 +1,8 @@
 -- Copyright (c) 2021 Maksim Tuprikov <insality@gmail.com>. This code is licensed under MIT license
 
 --- Druid slider component
+--
+-- <a href="https://insality.github.io/druid/druid/index.html?example=general_sliders" target="_blank"><b>Example Link</b></a>
 -- @module Slider
 -- @within BaseComponent
 -- @alias druid.slider
@@ -27,7 +29,7 @@
 -- @tfield number dist
 
 --- Current drag state
--- @tfield bool is_drag
+-- @tfield boolean is_drag
 
 --- Current slider value
 -- @tfield number value
@@ -54,11 +56,11 @@ local function set_position(self, value)
 end
 
 
---- Component init function
+--- The @{Slider} constructor
 -- @tparam Slider self @{Slider}
 -- @tparam node node Gui pin node
 -- @tparam vector3 end_pos The end position of slider
--- @tparam[opt] function callback On slider change callback
+-- @tparam function|nil callback On slider change callback
 function Slider.init(self, node, end_pos, callback)
 	self.node = self:get_node(node)
 
@@ -172,7 +174,7 @@ end
 --- Set value for slider
 -- @tparam Slider self @{Slider}
 -- @tparam number value Value from 0 to 1
--- @tparam[opt] bool is_silent Don't trigger event if true
+-- @tparam boolean|nil is_silent Don't trigger event if true
 function Slider.set(self, value, is_silent)
 	value = helper.clamp(value, 0, 1)
 	set_position(self, value)
@@ -200,7 +202,7 @@ end
 -- move at this position and node drag will start.
 -- This function require the Defold version 1.3.0+
 -- @tparam Slider self @{Slider}
--- @tparam Node input_node
+-- @tparam node input_node
 -- @treturn Slider @{Slider}
 function Slider.set_input_node(self, input_node)
 	self._input_node = self:get_node(input_node)

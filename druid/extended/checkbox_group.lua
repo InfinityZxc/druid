@@ -1,6 +1,8 @@
 -- Copyright (c) 2021 Maksim Tuprikov <insality@gmail.com>. This code is licensed under MIT license
 
 --- Checkbox group module
+--
+-- <a href="https://insality.github.io/druid/druid/index.html?example=general_checkboxes" target="_blank"><b>Example Link</b></a>
 -- @module CheckboxGroup
 -- @within BaseComponent
 -- @alias druid.checkbox_group
@@ -19,7 +21,7 @@ local component = require("druid.component")
 local CheckboxGroup = component.create("checkbox_group")
 
 
---- Component init function
+--- The @{CheckboxGroup} constructor
 -- @tparam CheckboxGroup self @{CheckboxGroup}
 -- @tparam node[] nodes Array of gui node
 -- @tparam function callback Checkbox callback
@@ -43,8 +45,8 @@ end
 
 --- Set checkbox group state
 -- @tparam CheckboxGroup self @{CheckboxGroup}
--- @tparam bool[] indexes Array of checkbox state
--- @tparam boolean is_instant If instant state change
+-- @tparam boolean[] indexes Array of checkbox state
+-- @tparam boolean|nil is_instant If instant state change
 function CheckboxGroup.set_state(self, indexes, is_instant)
 	for i = 1, #indexes do
 		if self.checkboxes[i] then
@@ -56,7 +58,7 @@ end
 
 --- Return checkbox group state
 -- @tparam CheckboxGroup self @{CheckboxGroup}
--- @treturn bool[] Array if checkboxes state
+-- @treturn boolean[] Array if checkboxes state
 function CheckboxGroup.get_state(self)
 	local result = {}
 
